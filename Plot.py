@@ -6,10 +6,10 @@ Created on Thu Jun 22 13:53:13 2017
 @author: danifili
 """
 import matplotlib.pyplot as plt
-import cv2
+# import cv2
 import numpy as np
 #import scipy.cluster.vq as kmeans
-from sklearn.cluster import KMeans
+# from sklearn.cluster import KMeans
 
 
 class Plot(object):
