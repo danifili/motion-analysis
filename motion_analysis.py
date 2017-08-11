@@ -43,6 +43,9 @@ def generate_data(args):
     args["max_corner"] = max_corner
 
 def save_data(args):
+    """
+    Saves the amplitudes and phases in the x and y directions of a certain ROI.        
+    """
     data = args["data"]
     root = args["root"]
     save_csv = args["x"]
@@ -122,6 +125,25 @@ def motion_mag(args):
         v_t = lambda x, y: v(x, y, t)
         original_image.shift_image(u_t, v_t, root + "motion_mag_factor" + str(factor) + "_" + str(t) + ".bmp")
 
+def motion_stop(args):
+    if not args["motionstop"]:
+        return
+
+    cumulative_displacements = args["cumulative_displacements"]
+    video = args["video"]
+    root = args["root"]
+    x_min, y_min = args["min_corner"]
+    x_max, y_max = args["max_corner"]
+
+    u = lambda x, y, t: -cumulative_displacements[t, x, y, 0]
+    v = lambda x, y, t: -cumulative_displacements[t, x, y, 1]
+    
+    for t in range(video.duration):
+        u_t = lambda x, y: u(x, y, t)
+        v_t = lambda x, y: v(x, y, t)
+        image = MyImage.image_from_matrix(video[x_min:x_max+1, y_min:y_max+1, t], root + "motion_stop" + "_" + str(t) + ".bmp")
+        image.shift_image(u_t, v_t, root + "motion_stop" + "_" + str(t) + ".bmp")
+
 
 
 HELP = {"image": "8 file paths. After sorting them, the i-th image will be consider as the i-th frame in the motion analysis",
@@ -134,7 +156,9 @@ HELP = {"image": "8 file paths. After sorting them, the i-th image will be consi
               "represent the bottom right corner of the ROI. For x_max and y_max, negative integers are allowed and the value " + \
               "resulting from substracting from the width-1 and the height-1 of the image will be used",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input mag_factor determines" + \
-                       "the factor by which the displacements will be multiplied"
+                       "the factor by which the displacements will be multiplied",
+        "--motionstop": "shift all the images by negating the displacements computed. If the algorithm is accurate, " + \
+                        "all the images should be similar to the first frame"
         }
 
 if __name__ == "__main__":
@@ -145,9 +169,10 @@ if __name__ == "__main__":
              {"-p": dict(action="store_false", help=HELP["-p"])},
              {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-c": dict(action="store", help=HELP["-c"], nargs=4, metavar=("x_min", "y_min", "x_max", "y_max"), type=int, default=(0,0,0,0))},
-             {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")}]
+             {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")},
+             {"--motionstop": dict(action="store_true", help=HELP["--motionstop"])}]
 
-    functions = [generate_data, save_data, motion_mag, plot_data]
+    functions = [generate_data, save_data, motion_mag, motion_stop, plot_data]
 
     parser = argparse.ArgumentParser(description="TODO")
 
