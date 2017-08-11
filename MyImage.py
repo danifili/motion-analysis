@@ -78,8 +78,8 @@ class MyImage(object):
             which represents the brightness of pixel will be return.
             
             Otherwise, return a numpy array of shape (x1-x0, y1-y0) in which the (x, y)
-            component corresponds a integer from 0 to 255 (inclusive) that represents the
-            brightness at pixel (x0+x, y0+y in the image
+            component corresponds to an integer from 0 to 255 (inclusive) that represents the
+            brightness at pixel (x0+x, y0+y) in the image
                 
         """
         #fail fast if preconditions are not met
@@ -118,14 +118,14 @@ class MyImage(object):
     def image_from_matrix(pixels, file_path, noise = NO_NOISE):
         """
         Returns a MyImage object given a numpy matrix of integers and creates and stores its 
-        equivalent BMP image on the given directory. 
+        equivalent BMP image on the given file path. 
         Integer values of matrix must be between 0 and 255 (inclusive). 
         
         params:
             pixels: numpy matrix of floats between 0 and 255 (inclusive)
             file_path: string representing name of file and directory. It must finish in .bmp
             
-            noise: a MyImage flag. It can be either MyImage.NO_NOISE, MyImage.SHOT_NOISE or MyImage.FIXED_PATTERN_NOISE.
+            noise: an MyImage flag. It can be either MyImage.NO_NOISE, MyImage.SHOT_NOISE or MyImage.FIXED_PATTERN_NOISE.
         
         returns:
             MyImage object stored in file_path
@@ -154,7 +154,7 @@ class MyImage(object):
         the image, and creates and stores its equivalent BMP image in the given file_path.
         
         params:
-            f: a function that maps the integers coordinates (x, y) for
+            f: a function that maps the integer coordinates (x, y) for
             0 <= x < width and 0 <= y < height to an float between 0 and 255
             
             width: a positive integer representing the width of the image
@@ -164,7 +164,7 @@ class MyImage(object):
             file_path: string representing name of file and directory. 
             It must finish in .bmp
             
-             noise: a MyImage flag. It can be either MyImage.NO_NOISE, MyImage.SHOT_NOISE or MyImage.FIXED_PATTERN_NOISE.
+            noise: a MyImage flag. It can be either MyImage.NO_NOISE, MyImage.SHOT_NOISE or MyImage.FIXED_PATTERN_NOISE.
 
             
         returns:
@@ -196,11 +196,9 @@ class MyImage(object):
 
     def shift_image(self, u, v, file_path, mode = LINEAR):
         """
-        Create a video given an image and the displacements formulas.
+        Create a shifted version of the current image given the displacement functions 
         
         params:
-            image: MyImage object, first image of the sequence
-            
             u: a function whose inputs are the floats x, y representing x-coordinate, y-coordinate
             and returns a float representing the velocity in the x-direction
             
@@ -208,7 +206,11 @@ class MyImage(object):
             and returns a float representing the velocity in the y-direction
             
             file_path: string representing name of file and directory. 
-            It must finish in .bmp
+            It must finish in .bmp.
+
+            mode: a MyImage flag. It can be either MyImage.LINEAR, which will use a linear interpolator or
+            MyImage.FFT, which will use FFT. If MyImage.FFT is used, then v(x, y1) = v(x, y2) and 
+            u(x, y1) = u(x, y2) for every x, y1 and y2.
             
         returns: a MyImage object resulting from applying the given motion to this image
         """

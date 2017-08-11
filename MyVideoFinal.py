@@ -60,15 +60,16 @@ class MyVideo(MyVideoHelper2):
             
             -max_margin: a positive integer; the maximum margin used to compute the displacement
             in the region of interest.
-            
-            -min_eigen_ratio: a positive float; the min acceptable ratio between the eigenvalues and the area
-            of the region of interest of the matrix used to compute its displacement.
 
         
         returns:
-            A 2-length numpy arrat representing the average displacement of region of interest from time 
-            t to time (t+1). The first element represents the x direction and the y element represents
-            the y direction
+            A tuple of length 3 containing:
+             -A 2-length numpy array representing the average displacement of region of interest from time 
+              t to time (t+1). The first element represents the x direction and the y element represents
+              the y direction
+
+             -the two eingenvalues that come from the matrix used to compute the displacemets divide by
+              the number of pixels used to compute this matrix
         """
         x_min, y_min = min_corner
         x_max, y_max = max_corner
@@ -124,9 +125,9 @@ class MyVideo(MyVideoHelper2):
             of the region of interest of the matrix used to compute its displacement.
         
         returns:
-            a numpy array of floats of size W x H x 2, where W and H are the width and height of the
-            region of interest, in which the values at (x, y, 0) and (x, y, 1) represent the x-component
-            and y-component of the optical flow at pixel (x, y) relative to the ROI
+             a numpy array of floats of size W x H x 2, where W and H are the width and height of the
+             region of interest, in which the values at (x, y, 0) and (x, y, 1) represent the x-component
+             and y-component of the optical flow at pixel (x, y) relative to the ROI
         """
         print ("Computing displacements from frame " + str(t) + " to frame " + str(t+1))
         x_min, y_min = min_corner
@@ -143,7 +144,6 @@ class MyVideo(MyVideoHelper2):
         
         points = []
         displacements = []
-        plot_points = []
         mask = np.zeros((roi_width, roi_height, 2))
 
         #start = timer()
@@ -160,9 +160,6 @@ class MyVideo(MyVideoHelper2):
                 avg_displacement, l1, l2 = self.get_displacement_ROI(new_min_corner, new_max_corner, t,\
                                                             max_margin)
 
-                #plot_points.append([(x_min_rel + x_max_rel)//2, (y_min_rel + y_max_rel)//2])
-                #points.append([(x_min_rel + x_max_rel)//2, (y_min_rel + y_max_rel)//2])
-
                 mask[(x_min_rel + x_max_rel)//2, (y_min_rel + y_max_rel)//2, :] = np.array([l1, l2])
                 displacements_mask[(x_min_rel + x_max_rel)//2, (y_min_rel + y_max_rel)//2, :] = np.array(avg_displacement)
 
@@ -176,31 +173,14 @@ class MyVideo(MyVideoHelper2):
                     displacements.append(displacements_mask[x,y])
                     points.append([x,y])
         
-        #end = timer()
-        #print (end-start)
-  
-#                displacements[x_min_rel : x_max_rel+1, y_min_rel : y_max_rel+1] = np.array(avg_displacement)
-#        cut = roi_width*roi_height//(10 * win_min**2)
-#        ones_matrix = np.ones((roi_width, roi_height))
-#        top_x = np.partition(mask[:, :, 0].flatten(), cut)
-#        top_y = np.partition(mask[:, :, 1].flatten(), cut)
-#        ix = np.searchsorted(top_x, 0)-1
-#        iy = np.searchsorted(top_y, 0)-1
-#        thr0 = top_x[ix]
-#        thr1 = top_y[iy]
-#        
-#        mask[:, :, 0] = np.minimum(mask[:, :, 0] / thr0, ones_matrix)
-#        mask[:, :, 1] = np.minimum(mask[:, :, 1] / thr1, ones_matrix)
         
 #        Plot.vector_heat_map(self, min_corner, max_corner, t, mask, np.pi/2, alpha=0.3)
 #        Plot.vector_heat_map(self, min_corner, max_corner, t, mask, 0, alpha=0.3)
         # plot_points = np.array(points)
         # Plot.scatter_plot(self.images[t], min_corner, max_corner, plot_points[:, 0], plot_points[:, 1], color = "red")
-        #print ("hi")
-        #start = timer()
+
         displacements = self._interpolate(roi_width, roi_height, np.array(points), np.array(displacements))
-        #end = timer()
-        #print (end-start)
+
         #use algorithm for calculating optical flow given the average displacements as the initial ones
         return self.__video_optical_flow.get_optical_flow_ROI(min_corner, max_corner, t, \
                 initial_displacements = displacements, max_iterations = max_iterations, smoothness = smoothness, input_mask=mask)
@@ -300,9 +280,11 @@ class MyVideo(MyVideoHelper2):
         
         A, B = leastsq(optimize_function, [guess_amp, guess_phase])[0]
         
+        #compute amplitude and phase
         amp = np.sqrt(A**2 +  B**2)
         phase = np.arctan2(B, A)
         
+        #put phase in interval [0, 2*np.pi)
         if phase < 0:
             phase += 2*np.pi
         
