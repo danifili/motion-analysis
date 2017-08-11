@@ -33,7 +33,9 @@ def generate_data(args):
         y_max += video.height-1
     max_corner = (x_max, y_max)
 
-    cumulative_displacements = video.get_cumulative_displacements(min_corner, max_corner)
+    quality_level = args["q"]
+
+    cumulative_displacements = video.get_cumulative_displacements(min_corner, max_corner, quality_level=quality_level)
     data = video.sinusoidal_fit(cumulative_displacements)
     
     args["data"] = data
@@ -155,6 +157,7 @@ HELP = {"image": "8 file paths. After sorting them, the i-th image will be consi
         "-c": "specify a region of interest, where x_min and y_min represent the top-left corner of the ROI and x_max and y_max " + \
               "represent the bottom right corner of the ROI. For x_max and y_max, negative integers are allowed and the value " + \
               "resulting from substracting from the width-1 and the height-1 of the image will be used",
+        "-q": "quality level. It is a float between 0 and 1",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input mag_factor determines" + \
                        "the factor by which the displacements will be multiplied",
         "--motionstop": "shift all the images by negating the displacements computed. If the algorithm is accurate, " + \
@@ -169,6 +172,7 @@ if __name__ == "__main__":
              {"-p": dict(action="store_false", help=HELP["-p"])},
              {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-c": dict(action="store", help=HELP["-c"], nargs=4, metavar=("x_min", "y_min", "x_max", "y_max"), type=int, default=(0,0,0,0))},
+             {"-q": dict(action="store", help=HELP["-q"], metavar="quality-level", type=float, default=0.07)},
              {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")},
              {"--motionstop": dict(action="store_true", help=HELP["--motionstop"])}]
 
