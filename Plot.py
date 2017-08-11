@@ -55,8 +55,7 @@ class Plot(object):
         x_max, y_max = max_corner
         
         roi_width, roi_height = displacements.shape[:2]
-        print ((x_min, x_max, y_min, y_max))
-        plt.imshow(video[x_min:x_max+1, y_min:y_max+1, time].T)
+        plt.imshow(video[x_min:x_max+1, y_min:y_max+1, time].T, cmap='gray',vmin=0,vmax=255)
         #get coordinates of arrows
         X, Y = [[k * x for x in range(roi_width//k)] for y in range(roi_height//k)], \
                  [[k * y for x in range(roi_width//k)] for y in range(roi_height//k)]

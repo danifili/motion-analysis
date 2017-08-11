@@ -68,6 +68,7 @@ def plot_data(args):
     max_corner = args["max_corner"]
     thr_x, thr_y = args["t"]
 
+    arrows_plot = args["a"]
     save_plots = args["s"]
     show_plots = args["p"]
     wave = args["w"] is not None
@@ -84,18 +85,23 @@ def plot_data(args):
     phases_y[amplitudes_y < thr_y] = float('nan')
     amplitudes_y[amplitudes_y < thr_y] = float('nan')
 
+    if arrows_plot:
+        amplitudes = plt.figure()
+        k, scale = args["a"]
+        Plot.plot(video, data[:,:,:2], min_corner, max_corner, 0, k=int(k), scale=1/scale, color='red')
+    
+    else:
+        phases_x_fig = plt.figure()
+        Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_x, alpha=0.3)
 
-    phases_x_fig = plt.figure(1)
-    Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_x, alpha=0.3)
-    
-    phases_y_fig = plt.figure(2)
-    Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
-    
-    amplitudes_x_fig = plt.figure(3)
-    Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
-    
-    amplitudes_y_fig = plt.figure(4)
-    Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
+        phases_y_fig = plt.figure()
+        Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
+
+        amplitudes_x_fig = plt.figure()
+        Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
+
+        amplitudes_y_fig = plt.figure()
+        Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
 
     if wave:
         wave_data = args["wave_data"]
@@ -127,10 +133,13 @@ def plot_data(args):
 
 
     if save_plots:
-        phases_x_fig.savefig(root + "phases_x" + ".png")
-        phases_y_fig.savefig(root + "phases_y" + ".png")
-        amplitudes_x_fig.savefig(root + "amplitudes_x" + ".png")
-        amplitudes_y_fig.savefig(root + "amplitudes_y" + ".png")
+        if arrows_plot:
+            amplitudes.savefig(root + "amplitudes_vector_field.png")
+        else:
+            phases_x_fig.savefig(root + "phases_x" + ".png")
+            phases_y_fig.savefig(root + "phases_y" + ".png")
+            amplitudes_x_fig.savefig(root + "amplitudes_x" + ".png")
+            amplitudes_y_fig.savefig(root + "amplitudes_y" + ".png")
 
     if show_plots:
         plt.show()
@@ -198,7 +207,10 @@ def wave(args):
 
 HELP = {"image": "8 file paths. After sorting them, the i-th image will be consider as the i-th frame in the motion analysis",
         "root": "the root used to store all the files to be saved",
-        "-x": "save the amplitudes and phases in x and y into 4 different csv files",
+        "-x": "save the csv files #phases_x.csv, #phases_y.csv, #amplitudes_x.csv, #amplitudes_y.csv containing the " + \
+              "phases in the x-direction, y-direction and amplitudes in the x-direction and y-direction of every pixel in " + \
+              "the given ROI after fitting the motion to a sine wave, and # is the positional argument root. The cell at column x and row y represents the pixel" + \
+              "(x, y) relative to the ROI",
         "-s": "disable option of saving plots of amplitudes and phases",
         "-p": "disable option of showing plots of amplitudes and phases",
         "-t": "only display amplitudes and phases in x and y of pixels with amplitudes in x and y greater than thr_x and thr_y",
@@ -207,6 +219,7 @@ HELP = {"image": "8 file paths. After sorting them, the i-th image will be consi
               "resulting from substracting from the width-1 and the height-1 of the image will be used",
         "-q": "quality level. It is a float between 0 and 1",
         "-w": "outputs wave speed and decay constant given a ROI, frequency and the size of a pixel in nanometers",
+        "-a": "plots the amplitudes as a vector field",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input mag_factor determines" + \
                        "the factor by which the displacements will be multiplied",
         "--motionstop": "shift all the images by negating the displacements computed. If the algorithm is accurate, " + \
@@ -223,6 +236,7 @@ if __name__ == "__main__":
              {"-c": dict(action="store", help=HELP["-c"], nargs=4, metavar=("x_min", "y_min", "x_max", "y_max"), type=int, default=(0,0,0,0))},
              {"-q": dict(action="store", help=HELP["-q"], metavar="quality-level", type=float, default=0.07)},
              {"-w": dict(action="store", help=HELP["-w"], nargs=6, metavar=("frequency", "pixel_dimensions", "x_min", "y_min", "x_max", "y_max"), type=float)},
+             {"-a": dict(action="store", help=HELP["-a"], nargs=2, metavar=("k", "scale"), type=float)},
              {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")},
              {"--motionstop": dict(action="store_true", help=HELP["--motionstop"])}]
 
