@@ -70,6 +70,8 @@ def plot_data(args):
 
     save_plots = args["s"]
     show_plots = args["p"]
+    wave = args["w"] is not None
+
 
     amplitudes_x = np.array(data[:, :, 0])
     amplitudes_y = np.array(data[:, :, 1])
@@ -94,6 +96,34 @@ def plot_data(args):
     
     amplitudes_y_fig = plt.figure(4)
     Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
+
+    if wave:
+        wave_data = args["wave_data"]
+        frequency = args["frequency"]
+        pixel_size = args["pixel_size"]
+        wave_width, wave_height = wave_data.shape[:2]
+
+        x = np.arange(wave_width)
+        y = np.arange(wave_height)
+        Ax = np.log(np.array([np.average(wave_data[:, j, 0]) for j in range(wave_height)]))
+        Ay = np.log(np.array([np.average(wave_data[i, :, 1]) for i in range(wave_width)]))
+        Px = np.unwrap(wave_data[wave_width//2, :, 2])
+        Py = np.unwrap(wave_data[:, wave_height//2, 3])
+
+        for (xi, yi, name, dimension) in [(x, Ay, "decay constant x", "1/nm"), 
+                                          (y, Ax, "decay constant y", "1/nm"), 
+                                          (x, Py, "wave speed x", "m/s"),
+                                          (y, Px, "wave speed y", "m/s")]:
+            plt.figure()
+            plt.plot(xi , yi)
+            a , b = np.polyfit(xi, yi, 1)
+            plt.plot(xi, a*xi+b*np.ones((len(xi))))
+            if dimension == "m/s":
+                a = 2*np.pi*frequency / (1e9 * a / pixel_size)
+            else:
+                a = a / pixel_size
+
+            print (name + ": " + str(abs(a)) + " " + dimension)
 
 
     if save_plots:
@@ -146,7 +176,25 @@ def motion_stop(args):
         image = MyImage.image_from_matrix(video[x_min:x_max+1, y_min:y_max+1, t], root + "motion_stop" + "_" + str(t) + ".bmp")
         image.shift_image(u_t, v_t, root + "motion_stop" + "_" + str(t) + ".bmp")
 
+def wave(args):
+    if args["w"] is None:
+        return
 
+    video = args["video"]
+    frequency, pixel_size, x_min, y_min, x_max, y_max = args["w"]
+    if x_max < 0:
+        x_max += video.width-1
+    if y_max < 0:
+        y_max += video.height-1
+    
+    quality_level = args["q"]
+    data = args["data"]
+
+    wave_data = data[int(x_min): int(x_max)+1, int(y_min)+1: int(y_max)+1, :]
+
+    args["wave_data"] = wave_data
+    args["frequency"] = frequency
+    args["pixel_size"] = pixel_size
 
 HELP = {"image": "8 file paths. After sorting them, the i-th image will be consider as the i-th frame in the motion analysis",
         "root": "the root used to store all the files to be saved",
@@ -158,6 +206,7 @@ HELP = {"image": "8 file paths. After sorting them, the i-th image will be consi
               "represent the bottom right corner of the ROI. For x_max and y_max, negative integers are allowed and the value " + \
               "resulting from substracting from the width-1 and the height-1 of the image will be used",
         "-q": "quality level. It is a float between 0 and 1",
+        "-w": "outputs wave speed and decay constant given a ROI, frequency and the size of a pixel in nanometers",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input mag_factor determines" + \
                        "the factor by which the displacements will be multiplied",
         "--motionstop": "shift all the images by negating the displacements computed. If the algorithm is accurate, " + \
@@ -173,10 +222,11 @@ if __name__ == "__main__":
              {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-c": dict(action="store", help=HELP["-c"], nargs=4, metavar=("x_min", "y_min", "x_max", "y_max"), type=int, default=(0,0,0,0))},
              {"-q": dict(action="store", help=HELP["-q"], metavar="quality-level", type=float, default=0.07)},
+             {"-w": dict(action="store", help=HELP["-w"], nargs=6, metavar=("frequency", "pixel_dimensions", "x_min", "y_min", "x_max", "y_max"), type=float)},
              {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")},
              {"--motionstop": dict(action="store_true", help=HELP["--motionstop"])}]
 
-    functions = [generate_data, save_data, motion_mag, motion_stop, plot_data]
+    functions = [generate_data, save_data, motion_mag, motion_stop, wave, plot_data]
 
     parser = argparse.ArgumentParser(description="TODO")
 
