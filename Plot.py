@@ -68,6 +68,37 @@ class Plot(object):
     
     @staticmethod
     def scatter_plot(image, min_corner, max_corner, x, y, color):
+        """
+        Given an image and a region of interest, a set of points and a color, it creates a scatter plot
+        with the given points.
+
+        params:
+            -image: A MyImage object.
+            -min_corner: A tuple of size 2 representing the (x, y) coordinates
+             of the upper-left corner of our region of interest.
+             It must satisfy:
+                * 0 <= min_corner[0] < image.width-1
+                * 0 <= min_corner[1] < image.height-1
+                
+            -max_corner: A tuple of size 2 representing the (x, y) coordinates 
+            of the lower-right corner of our region of interest.
+            It must satisfy:
+                * min_corner[0] < max_corner[0] < image.width
+                * min_corner[1] < max_corner[1] < image.height
+
+            -x: A numpy array of integers containing the x-coordinates of the points to be plotted. x[i] corresponds to the
+                x-coordinate of the i-th point, it is relative to the region of interest and it satisfies:
+                    * min_corner[0] <= x[i] <= max_corner[0]
+
+            -y: A numpy array of integers containing the y-coordinates of the points to be plotted. It must have the same length
+                as x. y[i] corresponds to the y-coordinate of the i-th point, it is relative to the region of interest and it satisfies:
+                    * min_corner[1] <= y[i] <= max_corner[1]
+
+            -color: The color of the points to be plotted.
+
+        returns:
+            nothing
+        """
         x_min, y_min = min_corner
         x_max, y_max = max_corner
         

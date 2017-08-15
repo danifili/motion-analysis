@@ -113,7 +113,7 @@ class MyImage(object):
             
         
         raise TypeError("coordinates must be a tuple of length 2 of integers or slices")
-        
+
     @staticmethod
     def image_from_matrix(pixels, file_path, noise = NO_NOISE):
         """

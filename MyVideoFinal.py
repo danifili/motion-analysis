@@ -146,7 +146,6 @@ class MyVideo(MyVideoHelper2):
         displacements = []
         mask = np.zeros((roi_width, roi_height, 2))
 
-        #start = timer()
         for x in range(roi_width // win_min):
             for y in range(roi_height // win_min):
                 new_min_corner = np.array([win_min * x + x_min, win_min * y + y_min])
@@ -169,17 +168,14 @@ class MyVideo(MyVideoHelper2):
         for x in range((win_min-1)//2, roi_width, win_min):
             for y in range((win_min-1)//2, roi_height, win_min):
 
-                if min(mask[x,y]) > quality_level:
+                if min(mask[x,y]) >= quality_level:
                     displacements.append(displacements_mask[x,y])
                     points.append([x,y])
-        
-        
-#        Plot.vector_heat_map(self, min_corner, max_corner, t, mask, np.pi/2, alpha=0.3)
-#        Plot.vector_heat_map(self, min_corner, max_corner, t, mask, 0, alpha=0.3)
-        # plot_points = np.array(points)
-        # Plot.scatter_plot(self.images[t], min_corner, max_corner, plot_points[:, 0], plot_points[:, 1], color = "red")
-
-        displacements = self._interpolate(roi_width, roi_height, np.array(points), np.array(displacements))
+            
+        try:
+            displacements = self._interpolate(roi_width, roi_height, np.array(points), np.array(displacements))
+        except:
+            raise ValueError("Value of input quality error " + str(quality_level) + " is too large. Try an smaller value")
 
         #use algorithm for calculating optical flow given the average displacements as the initial ones
         return self.__video_optical_flow.get_optical_flow_ROI(min_corner, max_corner, t, \

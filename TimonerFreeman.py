@@ -7,14 +7,30 @@ from scipy import ndimage
 
 class TimonerFreeman(MyVideoHelper2):
     """
-    Represents a video of a sequence of images. It methods for estimating the displacements
-    of regions of interest are implemented with the method found in Davis-Freeman paper.
+    Represents a video of a sequence of images. Its methods for estimating the displacements
+    of regions of interest are implemented with the method found in the Timoner-Freeman paper.
     """
 
     def __init__(self, images, Ex=None, Ey=None, Et=None):
         """
         params:
-            images: a numpy array of MyImage objects
+            -images: a numpy array of MyImage objects with the same with and height.
+            
+            -Ex: optional parameter. It is a 3-dimensional numpy array of shape W x H x 8, where
+                W is the width of the images, H is the height of the images. The value at (x, y, t)
+                represents the gradient with respect to the x-direction of the pixel (x, y) at time t.
+                If not given, it will be computed as in the Timoner-Freeman paper.
+
+            -Ey: optional parameter. It is a 3-dimensional numpy array of shape W x H x 8, where
+                W is the width of the images, H is the height of the images. The value at (x, y, t)
+                represents the gradient with respect to the y-direction of the pixel (x, y) at time t.
+                If not given, it will be computed as in the Timoner-Freeman paper.
+
+            -Et: optional parameter. It is a 3-dimensional numpy array of shape W x H x 8, where
+                W is the width of the images, H is the height of the images. The value at (x, y, t)
+                represents the gradient with respect to the time of the pixel (x, y) at time t.
+                If not given, it will be computed as in the Timoner-Freeman paper.
+
         """
         MyVideoHelper2.__init__(self, images)
         self.__images = np.array(images)
@@ -121,13 +137,11 @@ class TimonerFreeman(MyVideoHelper2):
         gy = self.__Ey[x_min:x_max+1, y_min:y_max+1, time].ravel()
         gt = self.__Et[x_min:x_max+1, y_min:y_max+1, time].ravel()
         
-#        start = timer()
         A = np.array([[np.dot(gx, gx), np.dot(gx, gy)],
 					 [np.dot(gx, gy), np.dot(gy, gy)]])
 
         b = np.array([np.dot(gx, gt), np.dot(gy, gt)])
-#        end = timer()
-#        print (end-start)
+
         
         return -1 * self._solve(A, b, correlation)
 

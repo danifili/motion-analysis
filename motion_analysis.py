@@ -27,9 +27,9 @@ def generate_data(args):
 
     min_corner = tuple(args["c"][:2])
     x_max, y_max = tuple(args["c"][2:])
-    if x_max < 0:
+    if x_max <= 0:
         x_max += video.width-1
-    if y_max < 0:
+    if y_max <= 0:
         y_max += video.height-1
     max_corner = (x_max, y_max)
 
@@ -205,25 +205,31 @@ def wave(args):
     args["frequency"] = frequency
     args["pixel_size"] = pixel_size
 
-HELP = {"image": "8 file paths. After sorting them, the i-th image will be consider as the i-th frame in the motion analysis",
+
+HELP = {"image": "8 file paths of the images to be analysed. After sorting them by their name, the i-th image will be consider as the i-th frame in the motion analysis",
         "root": "the root used to store all the files to be saved",
-        "-x": "save the csv files #phases_x.csv, #phases_y.csv, #amplitudes_x.csv, #amplitudes_y.csv containing the " + \
+        "-x": "save the csv files #phases_x.csv, #phases_y.csv, #amplitudes_x.csv, #amplitudes_y.csv, where # is the positional argument root, containing the " + \
               "phases in the x-direction, y-direction and amplitudes in the x-direction and y-direction of every pixel in " + \
-              "the given ROI after fitting the motion to a sine wave, and # is the positional argument root. The cell at column x and row y represents the pixel" + \
+              "the given ROI after fitting the motion to a sine wave. The cell at column x and row y represents the pixel" + \
               "(x, y) relative to the ROI",
-        "-s": "disable option of saving plots of amplitudes and phases",
-        "-p": "disable option of showing plots of amplitudes and phases",
+        "-s": "disable option of saving plots of amplitudes and phases as png's",
+        "-p": "disable option of showing matplotlib's plots of amplitudes and phases",
         "-t": "only display amplitudes and phases in x and y of pixels with amplitudes in x and y greater than thr_x and thr_y",
         "-c": "specify a region of interest, where x_min and y_min represent the top-left corner of the ROI and x_max and y_max " + \
-              "represent the bottom right corner of the ROI. For x_max and y_max, negative integers are allowed and the value " + \
-              "resulting from substracting from the width-1 and the height-1 of the image will be used",
+              "represent the bottom right corner of the ROI. For x_max and y_max, non-positive integers are allowed and, in that case, the value " + \
+              "resulting from substracting from the width-1 and the height-1 of the image will be used instead",
         "-q": "quality level. It is a float between 0 and 1",
-        "-w": "outputs wave speed and decay constant given a ROI, frequency and the size of a pixel in nanometers",
-        "-a": "plots the amplitudes as a vector field",
-        "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input mag_factor determines" + \
-                       "the factor by which the displacements will be multiplied",
+        "-w": "outputs wave speed and decay constant given a ROI. The parameter frequency is in HZ and the size of a pixel in nanometers. x_min, y_min, x_max, y_max work " + \
+              "analogously as for flag -c, but they are relative to the ROI specified with -c if used. The decay constant is in 1/nm and the wave speed in m/s.",
+        "-a": "plots the amplitudes as a vector field instead as a heat map. By using this flag, the phases heat maps will neither be shown nor saved. " + \
+              "The parameter k is an integer that indicates the distance between each arrow of the vector field. The parameter scale is a positive float which determines by how much "
+              "the lenghts of the arrows will be multiply. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value",
+        "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input factor determines " + \
+                       "the factor by which the displacements will be multiplied. The name of the file of the i-th frame (with i between 0 and 7) will be #motion_mag_factorF_i.bmp, where # is the " + \
+                       "positional argument root and F is the float of the input factor.",
         "--motionstop": "shift all the images by negating the displacements computed. If the algorithm is accurate, " + \
-                        "all the images should be similar to the first frame"
+                        "all the images should be similar to the first frame. The name of the file of the i-th frame (with i between 0 and 7) " +\
+                        "will be #motion_stop_i.bmp"
         }
 
 if __name__ == "__main__":
