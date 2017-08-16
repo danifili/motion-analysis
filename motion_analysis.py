@@ -191,9 +191,9 @@ def wave(args):
 
     video = args["video"]
     frequency, pixel_size, x_min, y_min, x_max, y_max = args["w"]
-    if x_max < 0:
+    if x_max <= 0:
         x_max += video.width-1
-    if y_max < 0:
+    if y_max <= 0:
         y_max += video.height-1
     
     quality_level = args["q"]
@@ -206,24 +206,46 @@ def wave(args):
     args["pixel_size"] = pixel_size
 
 
+DESCRIPTION = "Given a sequence of 8 images, this program applies a combined method of the algorithms presented in the Timoner-Freeman and Horn-Schnuck papers in order to " + \
+              "compute the optical flow at each pixel and from frame to frame. Then, these 7 results are fit into a sine wave in order to get the amplitude and phase of the motion at each pixel.\n" + \
+              "For computing the optical flow, the first step consists in computing the gradients with respect to the x-direction, y-direction and time with the method described in the Timoner-Freeman paper. " + \
+              "The conventions are that the x-axis is horizontal and the y-axis is vertical to the image, where the point (x, y) = (0, 0) represents the most upper-left pixel. " + \
+              "The second step consists in dividing the image into squares of size win_min x win_min. For each of them, we consider the gradients of all the pixels in a square of a bigger size " + \
+              "determined by the parameter win_max. These gradients are used to determine the displacement of this square from one frame to another. " + \
+              "For these calculations, this algorithm uses a 2x2 matrix whose eigenvalues are good for corner dectection. Corners, defined as regions of good contrast in both " + \
+              "x-direction and y-direction, contain reliable answers. Therefore, this algorithm uses a parameter called quality-level (a float from 0 to 1) " + \
+              "which ignores all the squares whose ratio between the biggest two eigenvalues and its own is smaller than or equal to this parameter. " + \
+              "After determining which squares are good, the centers of the good squares are initialized with the computed displacements and then used to linearly interpolate to get the displacements " + \
+              "at each pixel of the image from one frame to the next.\n" +\
+              "The third and final step is to use the displacements computed in the second step as the initial values for the Horn-Schunk algorithm. This algorithm depends on two variables. The first one is " +\
+              "the smoothness parameter. The higher this value is, the smoother but less accurate the answers would be. However, if the smoothness parameter is too low, then the algorithm is very noise sensitive." + \
+              "The second parameter is the number of iterations. Due to the second step, less iterations are needed since the Timoner-Freeman algorithm is very accurate in regions with good gradients. " + \
+              "In addition, this program modifies the original Horn-Schunk algorithm by using the eigenvalues previously computed in the second step as weights. The higher the weight, the more similar the final value is " + \
+              "to the displacements computed in the second step.\n" +\
+              "The default behavior of this program consists in using the parameters win_min=5, win_max=25, quality_level=0.07, max_iterations=100, smoothness=100 to compute the optical flow and then " + \
+              "use this information to calculate the amplitudes and phases in the x and y direction after fitting them to a sinousoidal movement. This programs generates four heat maps plots containing this information as well as " + \
+              "saving them as png files, whose names are #amplitudes_x.png, #amplitudes_y.png, #phases_x.png, #phases_y.png, where # is the positional argument root." 
+
+
 HELP = {"image": "8 file paths of the images to be analysed. After sorting them by their name, the i-th image will be consider as the i-th frame in the motion analysis",
         "root": "the root used to store all the files to be saved",
+        "-c": "specify a region of interest, where x_min and y_min represent the top-left corner of the ROI and x_max and y_max " + \
+              "represent the bottom right corner of the ROI. For x_max and y_max, non-positive integers are allowed and, in that case, the value " + \
+              "resulting from substracting from the width-1 and the height-1 of the image will be used instead",
         "-x": "save the csv files #phases_x.csv, #phases_y.csv, #amplitudes_x.csv, #amplitudes_y.csv, where # is the positional argument root, containing the " + \
               "phases in the x-direction, y-direction and amplitudes in the x-direction and y-direction of every pixel in " + \
               "the given ROI after fitting the motion to a sine wave. The cell at column x and row y represents the pixel" + \
               "(x, y) relative to the ROI",
-        "-s": "disable option of saving plots of amplitudes and phases as png's",
-        "-p": "disable option of showing matplotlib's plots of amplitudes and phases",
+        "-s": "disable option of saving all plots as png's",
+        "-p": "disable option of showing the plots at the end of the execution of the program",
         "-t": "only display amplitudes and phases in x and y of pixels with amplitudes in x and y greater than thr_x and thr_y",
-        "-c": "specify a region of interest, where x_min and y_min represent the top-left corner of the ROI and x_max and y_max " + \
-              "represent the bottom right corner of the ROI. For x_max and y_max, non-positive integers are allowed and, in that case, the value " + \
-              "resulting from substracting from the width-1 and the height-1 of the image will be used instead",
-        "-q": "quality level. It is a float between 0 and 1",
+        "-q": "quality-level parameter of this algorithm as described above",
         "-w": "outputs wave speed and decay constant given a ROI. The parameter frequency is in HZ and the size of a pixel in nanometers. x_min, y_min, x_max, y_max work " + \
               "analogously as for flag -c, but they are relative to the ROI specified with -c if used. The decay constant is in 1/nm and the wave speed in m/s.",
         "-a": "plots the amplitudes as a vector field instead as a heat map. By using this flag, the phases heat maps will neither be shown nor saved. " + \
               "The parameter k is an integer that indicates the distance between each arrow of the vector field. The parameter scale is a positive float which determines by how much "
-              "the lenghts of the arrows will be multiply. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value",
+              "the lenghts of the arrows will be multiply. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value. " + \
+              "This plot just appears at the end of the execution of this program; no file is saved.",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input factor determines " + \
                        "the factor by which the displacements will be multiplied. The name of the file of the i-th frame (with i between 0 and 7) will be #motion_mag_factorF_i.bmp, where # is the " + \
                        "positional argument root and F is the float of the input factor.",
@@ -235,20 +257,20 @@ HELP = {"image": "8 file paths of the images to be analysed. After sorting them 
 if __name__ == "__main__":
     flags = [{"image" : dict(action="store", nargs=8, help=HELP["image"], metavar="frame")},
              {"root": dict(action="store", help=HELP["root"])},
-             {"-x": dict(action="store_true", help=HELP["-x"])},
-             {"-s": dict(action="store_false", help=HELP["-s"])},
-             {"-p": dict(action="store_false", help=HELP["-p"])},
-             {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-c": dict(action="store", help=HELP["-c"], nargs=4, metavar=("x_min", "y_min", "x_max", "y_max"), type=int, default=(0,0,0,0))},
              {"-q": dict(action="store", help=HELP["-q"], metavar="quality-level", type=float, default=0.07)},
-             {"-w": dict(action="store", help=HELP["-w"], nargs=6, metavar=("frequency", "pixel_dimensions", "x_min", "y_min", "x_max", "y_max"), type=float)},
+             {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-a": dict(action="store", help=HELP["-a"], nargs=2, metavar=("k", "scale"), type=float)},
+             {"-s": dict(action="store_false", help=HELP["-s"])},
+             {"-p": dict(action="store_false", help=HELP["-p"])},
+             {"-x": dict(action="store_true", help=HELP["-x"])},
+             {"-w": dict(action="store", help=HELP["-w"], nargs=6, metavar=("frequency", "pixel_dimensions", "x_min", "y_min", "x_max", "y_max"), type=float)},
              {"--motionmag": dict(action="store", help=HELP["--motionmag"], type=float, metavar="factor")},
              {"--motionstop": dict(action="store_true", help=HELP["--motionstop"])}]
 
     functions = [generate_data, save_data, motion_mag, motion_stop, wave, plot_data]
 
-    parser = argparse.ArgumentParser(description="TODO")
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
 
     for flag in flags:
         key = list(flag.keys())[0]
