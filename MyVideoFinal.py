@@ -237,7 +237,7 @@ class MyVideo(MyVideoHelper2):
         
         data = np.zeros((width, height, 4))
 
-        print ("Fitting data to a sinousoidal movement...")
+        print ("Fitting data to a sinusoidal movement...")
         
         for x in range(width):
             for y in range(height):
