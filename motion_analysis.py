@@ -242,7 +242,7 @@ HELP = {"image": "8 file paths of the images to be analysed. After sorting them 
         "-q": "quality-level parameter of this algorithm as described above",
         "-w": "outputs wave speed and decay constant given a ROI. The parameter frequency is in HZ and the size of a pixel in nanometers. x_min, y_min, x_max, y_max work " + \
               "analogously as for flag -c, but they are relative to the ROI specified with -c if used. The decay constant is in 1/nm and the wave speed in m/s.",
-        "-a": "plots the amplitudes as a vector field instead as a heat map. By using this flag, the phases heat maps will neither be shown nor saved. " + \
+        "-a": "plots the amplitudes as a vector field instead as heat maps. By using this flag, the phases and amplitudes heat maps will neither be shown nor saved. " + \
               "The parameter k is an integer that indicates the distance between each arrow of the vector field. The parameter scale is a positive float which determines by how much "
               "the lenghts of the arrows will be multiply. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value. " + \
               "This plot just appears at the end of the execution of this program; no file is saved.",
