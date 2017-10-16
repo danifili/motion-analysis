@@ -17,13 +17,19 @@ import argparse
 
 
 METAVAR_IMAGE = tuple("frame" + str(t) for t in range(8))
+#helper function
+def get_displacements_frame_to_frame(cumulative_displacements):
+    duration, width, height, directions = cumulative_displacements.shape
+    displacements = np.zeros((duration-1, width, height, directions))
+    for i in range(duration-1):
+        displacements[i] = cumulative_displacements[i+1] - cumulative_displacements[i]
+    return displacements
 
-
+#action functions
 def generate_data(args):
     args["image"].sort()
     images = [MyImage(image) for image in args["image"]]
     video = MyVideo(images)
-    
 
     min_corner = tuple(args["c"][:2])
     x_max, y_max = tuple(args["c"][2:])
@@ -72,7 +78,9 @@ def plot_data(args):
     save_plots = args["s"]
     show_plots = args["p"]
     wave = args["w"] is not None
+    arrows_8 = args["a8"]
 
+    cumulative_displacements = args["cumulative_displacements"]
 
     amplitudes_x = np.array(data[:, :, 0])
     amplitudes_y = np.array(data[:, :, 1])
@@ -91,17 +99,17 @@ def plot_data(args):
         Plot.plot(video, data[:,:,:2], min_corner, max_corner, 0, k=int(k), scale=1/scale, color='red')
     
     else:
+        amplitudes_x_fig = plt.figure()
+        Plot.phase_heat_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
+
+        amplitudes_y_fig = plt.figure()
+        Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
+
         phases_x_fig = plt.figure()
         Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_x, alpha=0.3)
 
         phases_y_fig = plt.figure()
-        Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
-
-        amplitudes_x_fig = plt.figure()
-        Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
-
-        amplitudes_y_fig = plt.figure()
-        Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
+        Plot.scalar_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
 
     if wave:
         wave_data = args["wave_data"]
@@ -131,18 +139,27 @@ def plot_data(args):
 
             print (name + ": " + str(abs(a)) + " " + dimension)
 
-
     if save_plots:
         if arrows_plot:
             amplitudes.savefig(root + "amplitudes_vector_field.png")
         else:
-            phases_x_fig.savefig(root + "phases_x" + ".png")
-            phases_y_fig.savefig(root + "phases_y" + ".png")
             amplitudes_x_fig.savefig(root + "amplitudes_x" + ".png")
             amplitudes_y_fig.savefig(root + "amplitudes_y" + ".png")
+            phases_x_fig.savefig(root + "phases_x" + ".png")
+            phases_y_fig.savefig(root + "phases_y" + ".png")
+
+        if arrows_8:
+            k8, scale8 = arrows_8
+            displacements = get_displacements_frame_to_frame(cumulative_displacements)
+            for time in range(len(displacements)):
+                optical_flow = plt.figure()
+                Plot.plot(video, displacements[time], min_corner, max_corner, time, k=int(k8), scale=1/scale8, color="red")
+                optical_flow.savefig(root + "displacements_vector_field_" + str(time) + ".png")
+                plt.close(optical_flow)
 
     if show_plots:
         plt.show()
+
 
 def motion_mag(args):
     factor = args["motionmag"]
@@ -157,7 +174,6 @@ def motion_mag(args):
 
     u = lambda x, y, t: factor * cumulative_displacements[t, x, y, 0]
     v = lambda x, y, t: factor * cumulative_displacements[t, x, y, 1]
-
 
     original_image = MyImage.image_from_matrix(video[x_min:x_max+1, y_min:y_max+1, 0], root + "motion_mag_factor" + str(factor) + "_" + str(0) + ".bmp")
 
@@ -184,6 +200,7 @@ def motion_stop(args):
         v_t = lambda x, y: v(x, y, t)
         image = MyImage.image_from_matrix(video[x_min:x_max+1, y_min:y_max+1, t], root + "motion_stop" + "_" + str(t) + ".bmp")
         image.shift_image(u_t, v_t, root + "motion_stop" + "_" + str(t) + ".bmp")
+
 
 def wave(args):
     if args["w"] is None:
@@ -244,8 +261,10 @@ HELP = {"image": "8 file paths of the images to be analysed. After sorting them 
               "analogously as for flag -c, but they are relative to the ROI specified with -c if used. The decay constant is in 1/nm and the wave speed in m/s.",
         "-a": "plots the amplitudes as a vector field instead as heat maps. By using this flag, the phases and amplitudes heat maps will neither be shown nor saved. " + \
               "The parameter k is an integer that indicates the distance between each arrow of the vector field. The parameter scale is a positive float which determines by how much "
-              "the lenghts of the arrows will be multiply. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value. " + \
+              "the lenghts of the arrows will be multiplied. For instance, if scale is 10, the arrows in the vector field will be 10 bigger than their original value. " + \
               "This plot just appears at the end of the execution of this program; no file is saved.",
+        "--a8": "save 7 png files in which the i-th file (i from 0 to 6) consists of a vector field representing the optical flow from frame i to frame i+1. "+\
+                "The i-th file is named #displacements_vector_field_i.png, where # is the positional argument root. The parameters k and scale work as described in flag -a",
         "--motionmag": "store 8 images resulting from the motion magnification of the original 8 frames. The input factor determines " + \
                        "the factor by which the displacements will be multiplied. The name of the file of the i-th frame (with i between 0 and 7) will be #motion_mag_factorF_i.bmp, where # is the " + \
                        "positional argument root and F is the float of the input factor.",
@@ -261,6 +280,7 @@ if __name__ == "__main__":
              {"-q": dict(action="store", help=HELP["-q"], metavar="quality-level", type=float, default=0.07)},
              {"-t": dict(action="store", help=HELP["-t"], nargs=2, metavar=("thr_x", "thr_y"), default=(0.0, 0.0), type=float)},
              {"-a": dict(action="store", help=HELP["-a"], nargs=2, metavar=("k", "scale"), type=float)},
+             {"--a8": dict(action="store", help=HELP["--a8"], nargs=2, metavar=("k", "scale"), type=float)},
              {"-s": dict(action="store_false", help=HELP["-s"])},
              {"-p": dict(action="store_false", help=HELP["-p"])},
              {"-x": dict(action="store_true", help=HELP["-x"])},

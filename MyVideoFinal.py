@@ -8,7 +8,6 @@ Created on Thu Jun 15 12:31:12 2017
 from MyVideoHelper2 import MyVideoHelper2
 from MyVideoOpticalFlow import HornShunck
 from TimonerFreeman import TimonerFreeman
-from Plot import Plot
 
 import numpy as np
 from scipy.optimize import leastsq
@@ -171,6 +170,7 @@ class MyVideo(MyVideoHelper2):
                 if min(mask[x,y]) >= quality_level:
                     displacements.append(displacements_mask[x,y])
                     points.append([x,y])
+
             
         try:
             displacements = self._interpolate(roi_width, roi_height, np.array(points), np.array(displacements))
@@ -285,8 +285,3 @@ class MyVideo(MyVideoHelper2):
             phase += 2*np.pi
         
         return amp, phase % (2 * np.pi)
-        
-                                                          
-        
-        
-        

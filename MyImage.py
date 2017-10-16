@@ -11,6 +11,12 @@ import numpy as np
 from scipy.interpolate import griddata
 
 
+import mmap
+import contextlib
+import re
+import struct
+import datetime
+
 class MyImage(object):
     """
     Represents a matrix of the pixels of an image
@@ -44,9 +50,105 @@ class MyImage(object):
         params:
             -file_path: string of the directory of the image we want to represent
         """
-        pic = Img.open(file_path).convert('L')
-        self.__pixels = np.transpose(np.array(pic))
-    
+        
+        
+        
+
+        #f = open(file_path,'r')
+        
+        
+        #print(self.__pixels[0][1])
+
+        with open(file_path, 'r') as f:
+            f.seek(0,2) #position at end of file
+            filesize = f.tell()
+            f.seek(0,0) # back to beginning
+            m = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+            if m.read(2) != b'nD':        
+                pic = Img.open(file_path).convert('L')
+                self.__pixels = np.transpose(np.array(pic))
+            else:                
+                pattern = re.compile(b'nD (\d+) (\d+)\n# 2D (\w+) (\d+) (\d+)') #http://docs.python.org/2/library/re.html
+                (dataoffset, notesoffset, pixeltype, width, height) = [t(s) for t,s in zip((int, int, bytes, int, int),re.search(pattern,m).groups())]
+                print (file_path, ' filesize: ', filesize, ' dataoffset: ', dataoffset, ' notesoffset: ', notesoffset, ' pixeltype: ', pixeltype, ' width: ', width, ' height: ', height)
+                if dataoffset > notesoffset | notesoffset > filesize:
+                    print("Bad nD file: file too short: ", file_path)
+                    #exit with error
+                if (pixeltype) == b'F32':
+                    if notesoffset - dataoffset != 4*width*height:
+                        print("2D file has wrong length: ", file_path)
+                        #exit with error
+                else:
+                    print("Unhandled nD type: ", pixeltype.decode()) #Could add support for other types ...
+                    #exit with error
+
+                    
+                self.__pixels = np.zeros((width, height),dtype=np.float32) #initialize array of F32 values
+                m.seek(dataoffset,0)
+                
+                for j in range(0,height):
+                    for i in range(0,width):                            
+                        self.__pixels[i][j] = struct.unpack('<f',m.read(4))[0] 
+
+                
+
+                if True:  #choose to dscale or not
+                    ############Scale from F32 for rest of program                
+                    firstpointzeroflag = False 
+                    if self.__pixels[0][0] == 0: #In my datasets the first [0,0] pixel is always 0 for some reason. Not sure why, but can exclude.
+                        npmin = np.min(self.__pixels[1:]) #exclude first point to increase dynamic range and reduce quantization in conversion
+                        npmax = np.max(self.__pixels[1:])
+                        firstpointzeroflag = True
+                    else:
+                        npmin = np.min(self.__pixels)
+                        npmax = np.max(self.__pixels)
+                    #print("Downsampling from F32 (", npmin, "-", npmax, ") to Int8 (0-255)...")
+                    print("Scaling F32 (" + str(npmin) + "-" + str(npmax) + ") to F32 (0.0-" + str(self._MAX_COLOR) + ".0)...")
+                    ratio = self._MAX_COLOR/(npmax - npmin) #this is wrong as it should look at min and max for whole set
+                    self.__pixels = (self.__pixels-npmin) *ratio
+                    
+                    if firstpointzeroflag == True:
+                        self.__pixels[0][0] = 0 #first point was 0, so put it back if it changed
+
+                    #commented 2 lines below out as it seems like the program can handle floats between 0-255?
+                    #So output is currently a 32-bit float scaled into 0-255 without the below line. However, the scaling changes between images right now.
+                        
+                    #self.__pixels = np.rint(self.__pixels).astype(np.int) #round and convert to int
+                        
+                    ############
+
+
+                
+                ################## Save the image as nD
+                #test our python nD writing powers
+                writefile=file_path + ".new"
+                with open(writefile, 'bw') as w:                   
+                    prefix = b'# 2D F32 ' + str(width).encode() + b' ' + str(height).encode() + b'\n=date=' + datetime.datetime.now().strftime("%Y-%m-%d").encode()
+                    prefix += b'\n=time=' +  datetime.datetime.now().strftime("%H:%M:%S").encode() + b'\n=command=\n' #could add commandline w/ params here before \n
+                    
+                    nprefix = len(prefix)
+                    dataoffset = nprefix
+                    datasize = 4*width*height
+                    notesoffset = dataoffset+datasize
+                    notes=b'This file was created with motion analysis'
+                    header = b'nD ' + str(dataoffset).encode() + b' ' + str(notesoffset).encode() + b'\n'
+                    while dataoffset != len(header) + nprefix:
+                        dataoffset = len(header) + nprefix
+                        notesoffset = dataoffset + datasize
+                        header = b'nD ' + str(dataoffset).encode() + b' ' + str(notesoffset).encode() + b'\n'
+
+                    
+                    w.write(header + prefix)
+                    for j in range(0, height):
+                        for i in range(0, width):
+                            w.write(struct.pack('f', self.__pixels[i][j]))
+                    w.write(notes)
+                    print("Wrote nD image to ", writefile)
+                ###################################
+                
+                                
+            m.close()
+   
     
     #define width property
     def _width(self):
@@ -144,6 +246,34 @@ class MyImage(object):
         
         im.save(file_path, "BMP")
         im.close()
+
+
+        ################## Save the image as nD
+        writefile=file_path + ".nD"
+        with open(writefile, 'bw') as w:                   
+            prefix = b'# 2D F32 ' + str(width).encode() + b' ' + str(height).encode() + b'\n=date=' + datetime.datetime.now().strftime("%Y-%m-%d").encode()
+            prefix += b'\n=time=' +  datetime.datetime.now().strftime("%H:%M:%S").encode() + b'\n=command=\n' #could add commandline w/ params here before \n
+            
+            nprefix = len(prefix)
+            dataoffset = nprefix
+            datasize = 4*width*height
+            notesoffset = dataoffset+datasize
+            notes=b'This file was created with motion analysis'
+            header = b'nD ' + str(dataoffset).encode() + b' ' + str(notesoffset).encode() + b'\n'
+            while dataoffset != len(header) + nprefix:
+                dataoffset = len(header) + nprefix
+                notesoffset = dataoffset + datasize
+                header = b'nD ' + str(dataoffset).encode() + b' ' + str(notesoffset).encode() + b'\n'
+
+            
+            w.write(header + prefix)
+            for j in range(0, height):
+                for i in range(0, width):
+                    w.write(struct.pack('f', pixels[i][j]))
+            w.write(notes)
+            print("Wrote nD image to ", writefile)
+        ###################################
+        
         
         return MyImage(file_path)
 
