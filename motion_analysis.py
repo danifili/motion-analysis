@@ -100,7 +100,7 @@ def plot_data(args):
     
     else:
         amplitudes_x_fig = plt.figure()
-        Plot.phase_heat_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
+        Plot.phase_scalar_map(video, min_corner, max_corner, 0, amplitudes_x, alpha=0.3)
 
         amplitudes_y_fig = plt.figure()
         Plot.scalar_heat_map(video, min_corner, max_corner, 0, amplitudes_y, alpha=0.3)
@@ -109,7 +109,7 @@ def plot_data(args):
         Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_x, alpha=0.3)
 
         phases_y_fig = plt.figure()
-        Plot.scalar_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
+        Plot.phase_heat_map(video, min_corner, max_corner, 0, phases_y, alpha=0.3)
 
     if wave:
         wave_data = args["wave_data"]
