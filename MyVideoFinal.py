@@ -8,10 +8,8 @@ Created on Thu Jun 15 12:31:12 2017
 from MyVideoHelper2 import MyVideoHelper2
 from MyVideoOpticalFlow import HornShunck
 from TimonerFreeman import TimonerFreeman
-import my_sine_fit
 
 import numpy as np
-from scipy.optimize import leastsq
 
 class MyVideo(MyVideoHelper2):
     
