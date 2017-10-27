@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 from Plot import Plot
 from MyImage import MyImage
-from MyVideoFinal import MyVideo
+
 
 def generate_data(args):
     amplitudes_x = np.genfromtxt(args['amplitudes_x'], delimiter=',')

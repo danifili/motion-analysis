@@ -103,7 +103,7 @@ class HornShunck(AbstractDenseOpticalFlow):
         b = np.divide(Ey, den)
         c = np.divide(Et, den)
         
-        #start = timer()
+        start = timer()
         
         for each in range(max_iterations):
             #get update the displacements based on the previous displacements
@@ -113,12 +113,12 @@ class HornShunck(AbstractDenseOpticalFlow):
             #swap contents
             current_displacements, previous_displacements = previous_displacements, current_displacements
         
-        #end = timer()
-        #print (end-start)
+        end = timer()
+        print (end-start)
         #return matrix with displacements
         return previous_displacements
-    
-    
+
+
     def _update_displacements(self, displacements, a, b, c):
         """
         Update the pixel displacements given a matrix of displacements
@@ -148,7 +148,7 @@ class HornShunck(AbstractDenseOpticalFlow):
         error = np.multiply(a, u_average) + np.multiply(b, v_average) + c
         
         return averages - error[:,:,np.newaxis]
-    
+
 
         
                  

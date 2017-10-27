@@ -8,6 +8,7 @@ Created on Thu Jun 15 12:31:12 2017
 from MyVideoHelper2 import MyVideoHelper2
 from MyVideoOpticalFlow import HornShunck
 from TimonerFreeman import TimonerFreeman
+import my_sine_fit
 
 import numpy as np
 from scipy.optimize import leastsq
@@ -190,7 +191,7 @@ class MyVideo(MyVideoHelper2):
 
         directions = 2
 
-        cumulative_displacements = np.zeros((self.duration, roi_width, roi_height, directions))
+        cumulative_displacements = np.zeros((self.duration, roi_width, roi_height, directions), dtype=np.float64)
 
         for t in range(self.duration-1):
             new_displacements = self.get_optical_flow_ROI(min_corner, max_corner, t, win_min=win_min, win_max=win_max, quality_level=quality_level,\
@@ -233,24 +234,40 @@ class MyVideo(MyVideoHelper2):
             a numpy array of size W x H x 4, where W and H are the width and height of the region of interest, in which
             the (x, y) entry is a numpy array of size 4 containing amplitude_x, amplitude_y, phase_x, phase_y
         """
-        frames, width, height, directions = cumulative_displacements.shape
-        
-        data = np.zeros((width, height, 4))
+        period = 8
+        frequency = 2 * np.pi / period
+        t = np.array([frequency * p for p in range(period)])
+        sin_t = np.sin(t)
+        cos_t = np.cos(t)
+        cos_t_minus_1 = cos_t - 1
+        M = np.array([sin_t, cos_t_minus_1])
+        P = np.dot(np.linalg.inv(np.dot(M, M.T)), M)
+        P = np.array(P, dtype=np.float64)
 
-        print ("Fitting data to a sinusoidal movement...")
-        
+        width = cumulative_displacements.shape[1]
+        height = cumulative_displacements.shape[2]
+
+        data = np.zeros((width, height, 4), dtype=np.float64)
+        single_cumulative_displacements_x = np.zeros(8, dtype=np.float64)
+        single_cumulative_displacements_y = np.zeros(8, dtype=np.float64)
+
         for x in range(width):
             for y in range(height):
-                x_displacements = cumulative_displacements[:, x, y, 0]
-                y_displacements = cumulative_displacements[:, x, y, 1]
-                amp_x, phase_x = self._sinusoidal_fit_helper(x_displacements)
-                amp_y, phase_y = self._sinusoidal_fit_helper(y_displacements)
-                
-                data[x, y, :] = np.array([amp_x, amp_y, phase_x, phase_y])
-                
+                for f in range(period):
+                    single_cumulative_displacements_x[f] = cumulative_displacements[f, x, y, 0]
+                    single_cumulative_displacements_y[f] = cumulative_displacements[f, x, y, 1]
+                amp_x, phase_x = self._sinusoidal_fit_helper(single_cumulative_displacements_x, P)
+                amp_y, phase_y = self._sinusoidal_fit_helper(single_cumulative_displacements_y, P)
+
+                data[x, y, 0] = amp_x
+                data[x, y, 1] = amp_y
+                data[x, y, 2] = phase_x
+                data[x, y, 3] = phase_y
+
         return data
-        
-    def _sinusoidal_fit_helper(self, cumulative_displacements):
+
+
+    def _sinusoidal_fit_helper(self, cumulative_displacements, P):
         """
         Given the displacements in a certain direction for a pixel that have sinusoidal movement with a given frequency,
         it calculates the amplitude and phase of the sine wave
@@ -262,26 +279,15 @@ class MyVideo(MyVideoHelper2):
             a tuple in which the first entry is the amplitude of the sine wave and the second entry is the phase of
             the sine wave
         """
-        
-        period = len(cumulative_displacements)
-        
-        guess_amp = 0
-        guess_phase = 0
-        
-        frequency = 2 * np.pi / period
-        
-        t = np.array([frequency * t for t in range(period)])
-        
-        optimize_function = lambda x: x[0] * np.sin(t) + x[1] * (np.cos(t) - 1) - cumulative_displacements
-        
-        A, B = leastsq(optimize_function, [guess_amp, guess_phase])[0]
-        
-        #compute amplitude and phase
-        amp = np.sqrt(A**2 +  B**2)
+
+        projection = P.dot(cumulative_displacements)
+        A = projection[0]
+        B = projection[1]
+
+        amp = np.sqrt(A * A + B * B)
         phase = np.arctan2(B, A)
-        
-        #put phase in interval [0, 2*np.pi)
+
         if phase < 0:
-            phase += 2*np.pi
-        
+            phase += 2 * np.pi
+
         return amp, phase % (2 * np.pi)
